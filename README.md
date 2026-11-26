@@ -129,6 +129,50 @@ docker run --rm -p 9000:9000 \
   ghcr.io/baragoon/webhook:latest -hooks /etc/webhook/hooks.json -verbose
 ```
 
+Docker environment variables are available for all command-line flags. Use the `WEBHOOK_` prefix, uppercase flag names, and replace hyphens with underscores:
+
+| Environment variable | Flag |
+| --- | --- |
+| `WEBHOOK_IP` | `-ip` |
+| `WEBHOOK_PORT` | `-port` |
+| `WEBHOOK_VERBOSE` | `-verbose` |
+| `WEBHOOK_LOGFILE` | `-logfile` |
+| `WEBHOOK_DEBUG` | `-debug` |
+| `WEBHOOK_NOPANIC` | `-nopanic` |
+| `WEBHOOK_HOTRELOAD` | `-hotreload` |
+| `WEBHOOK_URLPREFIX` | `-urlprefix` |
+| `WEBHOOK_SECURE` | `-secure` |
+| `WEBHOOK_TEMPLATE` | `-template` |
+| `WEBHOOK_CERT` | `-cert` |
+| `WEBHOOK_KEY` | `-key` |
+| `WEBHOOK_VERSION` | `-version` |
+| `WEBHOOK_LIST_CIPHER_SUITES` | `-list-cipher-suites` |
+| `WEBHOOK_TLS_MIN_VERSION` | `-tls-min-version` |
+| `WEBHOOK_CIPHER_SUITES` | `-cipher-suites` |
+| `WEBHOOK_X_REQUEST_ID` | `-x-request-id` |
+| `WEBHOOK_X_REQUEST_ID_LIMIT` | `-x-request-id-limit` |
+| `WEBHOOK_MAX_MULTIPART_MEM` | `-max-multipart-mem` |
+| `WEBHOOK_HTTP_METHODS` | `-http-methods` |
+| `WEBHOOK_PIDFILE` | `-pidfile` |
+| `WEBHOOK_HOOKS` | `-hooks` |
+| `WEBHOOK_HEADER` | `-header` |
+| `WEBHOOK_SOCKET` | `-socket` |
+| `WEBHOOK_SETGID` | `-setgid` |
+| `WEBHOOK_SETUID` | `-setuid` |
+
+Boolean variables accept `true`/`false` or `1`/`0`. `WEBHOOK_HOOKS` and `WEBHOOK_HEADER` accept newline-separated values, prepended in listed order before command-line arguments (including any `--` terminator). Environment variables provide defaults for scalar options, so explicit command-line arguments take precedence.
+Kubernetes-generated `WEBHOOK_PORT=tcp://...` service-link values are ignored.
+
+For example:
+
+```bash
+docker run --rm -p 9000:9000 \
+  -e WEBHOOK_HOOKS=/etc/webhook/hooks.json \
+  -e WEBHOOK_VERBOSE=true \
+  -v "$PWD/hooks.json:/etc/webhook/hooks.json:ro" \
+  ghcr.io/baragoon/webhook:latest
+```
+
 Mount any scripts used by your hooks into the container. The image includes Alpine's shell and CA certificates; commands requiring other tools need a custom image.
 
 You can use one of the following Docker images, or create your own (please read [this discussion](https://github.com/baragoon/webhook/issues/63)):
