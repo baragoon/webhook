@@ -9,7 +9,7 @@ require (
 	github.com/dustin/go-humanize v1.1.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-chi/chi/v5 v5.4.0
+	github.com/go-chi/chi/v5 v5.5.0
 	github.com/gofrs/uuid/v5 v5.0.0
 	github.com/gorilla/mux v1.8.1
 	golang.org/x/sys v0.49.0
