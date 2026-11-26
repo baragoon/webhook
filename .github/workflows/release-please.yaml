@@ -130,10 +130,11 @@ jobs:
               is_latest="$INITIAL_IS_LATEST"
             fi
 
+            docker_safe_release_tag="${RELEASE_TAG//+/-}"
             if [[ "$is_latest" == "true" ]]; then
               tags_to_publish="$TAGS"
             else
-              tags_to_publish="${IMAGE}:${RELEASE_TAG}"
+              tags_to_publish="${IMAGE}:${docker_safe_release_tag}"
             fi
 
             tag_args=()
