@@ -4,6 +4,8 @@ on:
     branches:
       - master
   pull_request:
+permissions:
+  contents: read
 jobs:
   build:
     env:
@@ -16,11 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.21.x, 1.22.x]
-        os: [ubuntu-latest, windows-latest]
-        include:
-          - go-version: 1.26.x
-            os: macos-latest
+        go-version: [oldstable, stable]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -29,7 +28,23 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go-version }}
-        id: go
+
+      - name: Build
+        run: go build -v
+
+      - name: Test
+        run: go test -v ./...
+
+  build-min:
+    env:
+      GOTOOLCHAIN: local
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
 
       - name: Build
         run: go build -v
