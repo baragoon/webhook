@@ -106,5 +106,5 @@ Example:
 "secret": "{{ credential "my-secret" | js }}"
 ```
 
-[w]: https://github.com/adnanh/webhook
+[w]: https://github.com/baragoon/webhook
 [tt]: https://golang.org/pkg/text/template/

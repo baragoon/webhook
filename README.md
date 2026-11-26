@@ -1,6 +1,6 @@
 # What is webhook? ![build-status][badge]
 
- <img src="https://github.com/adnanh/webhook/raw/development/docs/logo/logo-128x128.png" alt="Webhook" align="left" />
+ <img src="https://github.com/baragoon/webhook/raw/development/docs/logo/logo-128x128.png" alt="Webhook" align="left" />
  
  [webhook][w] is a lightweight configurable tool written in Go, that allows you to easily create HTTP endpoints (hooks) on your server, which you can use to execute configured commands. You can also pass data from the HTTP request (such as headers, payload or query variables) to your commands. [webhook][w] also allows you to specify rules which have to be satisfied in order for the hook to be triggered.
 
@@ -28,7 +28,7 @@ Everything else is the responsibility of the command's author.
 ### Building from source
 To get started, first make sure you've properly set up your [Go](http://golang.org/doc/install) 1.21 or newer environment and then run
 ```bash
-$ go build github.com/adnanh/webhook
+$ go build github.com/baragoon/webhook
 ```
 to build the latest version of the [webhook][w].
 
@@ -46,7 +46,7 @@ If you are using Debian linux ("stretch" or later), you can install webhook usin
 If you are using FreeBSD, you can install webhook using `pkg install webhook`.
 
 ### Download prebuilt binaries
-Prebuilt binaries for different architectures are available at [GitHub Releases](https://github.com/adnanh/webhook/releases).
+Prebuilt binaries for different architectures are available at [GitHub Releases](https://github.com/baragoon/webhook/releases).
 
 ## Configuration
 Next step is to define some hooks you want [webhook][w] to serve.
@@ -121,7 +121,7 @@ If you want to set CORS headers, you can use the `-header name=value` flag while
 On platforms that use [systemd](https://systemd.io), [webhook][w] supports the _socket activation_ mechanism.  If [webhook][w] detects that it has been launched from a systemd-managed socket it will automatically use that instead of opening its own listening port.  See [the systemd page](docs/Systemd-Activation.md) for full details.
 
 ## Interested in running webhook inside of a Docker container?
-You can use one of the following Docker images, or create your own (please read [this discussion](https://github.com/adnanh/webhook/issues/63)):
+You can use one of the following Docker images, or create your own (please read [this discussion](https://github.com/baragoon/webhook/issues/63)):
 - [almir/webhook](https://github.com/almir/docker-webhook)
 - [roxedus/webhook](https://github.com/Roxedus/docker-webhook)
 - [thecatlady/webhook](https://github.com/thecatlady/docker-webhook)
@@ -147,7 +147,7 @@ Check out [Hook examples page](docs/Hook-Examples.md) for more complex examples 
  - [XiaoMi Vacuum + Amazon Button = Dash Cleaning](https://www.instructables.com/id/XiaoMi-Vacuum-Amazon-Button-Dash-Cleaning/) by [c0mmensal](https://www.instructables.com/member/c0mmensal/)
  - [Set up Automated Deployments From Github With Webhook](https://maximorlov.com/automated-deployments-from-github-with-webhook/) by [Maxim Orlov](https://twitter.com/_maximization)
  - [Kick Me Now with Webhooks](https://freebsdfoundation.org/kick-me-now-with-webhooks/) By Dave Cottlehuber
- - VIDEO: [Gitlab CI/CD configuration using Docker and adnanh/webhook to deploy on VPS - Tutorial #1](https://www.youtube.com/watch?v=Qhn-lXjyrZA&feature=youtu.be) by [Yes! Let's Learn Software Engineering](https://www.youtube.com/channel/UCH4XJf2BZ_52fbf8fOBMF3w)
+ - VIDEO: [Gitlab CI/CD configuration using Docker and baragoon/webhook to deploy on VPS - Tutorial #1](https://www.youtube.com/watch?v=Qhn-lXjyrZA&feature=youtu.be) by [Yes! Let's Learn Software Engineering](https://www.youtube.com/channel/UCH4XJf2BZ_52fbf8fOBMF3w)
 - [Automatically Updating My Zola Site Using a Webhook](https://osc.garden/blog/updating-site-with-webhook/) by [Óscar Fernández](https://osc.garden/)
  - ...
  - Want to add your own? Open an Issue or create a PR :-)
@@ -156,7 +156,7 @@ Check out [Hook examples page](docs/Hook-Examples.md) for more complex examples 
 See the [webhook-contrib][wc] repository for a collections of tools and helpers related to [webhook][w] that have been contributed by the [webhook][w] community.
 
 ## Need help?
-Check out [existing issues](https://github.com/adnanh/webhook/issues) to see if someone else also had the same problem, or [open a new one](https://github.com/adnanh/webhook/issues/new).
+Check out [existing issues](https://github.com/baragoon/webhook/issues) to see if someone else also had the same problem, or [open a new one](https://github.com/baragoon/webhook/issues/new).
 
 # Support active development
 
@@ -226,6 +226,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 
-[w]: https://github.com/adnanh/webhook
-[wc]: https://github.com/adnanh/webhook-contrib
-[badge]: https://github.com/adnanh/webhook/workflows/build/badge.svg
+[w]: https://github.com/baragoon/webhook
+[wc]: https://github.com/baragoon/webhook-contrib
+[badge]: https://github.com/baragoon/webhook/workflows/build/badge.svg

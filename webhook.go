@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adnanh/webhook/internal/hook"
-	"github.com/adnanh/webhook/internal/middleware"
-	"github.com/adnanh/webhook/internal/pidfile"
+	"github.com/baragoon/webhook/internal/hook"
+	"github.com/baragoon/webhook/internal/middleware"
+	"github.com/baragoon/webhook/internal/pidfile"
 
 	"github.com/fsnotify/fsnotify"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
