@@ -161,6 +161,7 @@ Docker environment variables are available for all command-line flags. Use the `
 | `WEBHOOK_SETUID` | `-setuid` |
 
 Boolean variables accept `true`/`false` or `1`/`0`. `WEBHOOK_HOOKS` and `WEBHOOK_HEADER` accept newline-separated values, prepended in listed order before command-line arguments (including any `--` terminator). Environment variables provide defaults for scalar options, so explicit command-line arguments take precedence.
+Kubernetes-generated `WEBHOOK_PORT=tcp://...` service-link values are ignored.
 
 For example:
 

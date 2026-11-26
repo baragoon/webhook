@@ -1,9 +1,52 @@
 #!/bin/sh
 set -eu
 
+collect_cli_flags() {
+	_cli_flags='|'
+	while [ "$#" -gt 0 ]; do
+		_cli_arg=$1
+		shift
+		case "$_cli_arg" in
+			--) break ;;
+			-?*) ;;
+			*) break ;;
+		esac
+		_cli_name=${_cli_arg#-}
+		_cli_name=${_cli_name#-}
+		case "$_cli_name" in
+			*=*)
+				_cli_name=${_cli_name%%=*}
+				_cli_has_value=true
+				;;
+			*)
+				_cli_has_value=false
+				;;
+		esac
+		_cli_flags="${_cli_flags}${_cli_name}|"
+		case "$_cli_name" in
+			debug|nopanic|hotreload|secure|template|version|list-cipher-suites|x-request-id)
+				;;
+			*)
+				if [ "$_cli_has_value" = false ] && [ "$#" -gt 0 ]; then
+					shift
+				fi
+				;;
+		esac
+	done
+	printf '%s' "$_cli_flags"
+}
+
+cli_flags="$(collect_cli_flags "$@")"
+
 while IFS=' ' read -r flag env_name kind; do
 	[ -n "$flag" ] || continue
+	case "$cli_flags" in *"|$flag|"*) [ "$kind" = list ] || continue ;; esac
 	if value="$(printenv "$env_name" 2>/dev/null)"; then
+		if [ "$flag" = port ]; then
+			case "$value" in
+				tcp://*) continue ;;
+			esac
+		fi
 		case "$kind" in
 			value)
 				set -- "-$flag" "$value" "$@"
