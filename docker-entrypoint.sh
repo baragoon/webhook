@@ -94,7 +94,6 @@ secure WEBHOOK_SECURE bool
 template WEBHOOK_TEMPLATE bool
 cert WEBHOOK_CERT value
 key WEBHOOK_KEY value
-version WEBHOOK_VERSION bool
 list-cipher-suites WEBHOOK_LIST_CIPHER_SUITES bool
 tls-min-version WEBHOOK_TLS_MIN_VERSION value
 cipher-suites WEBHOOK_CIPHER_SUITES value
