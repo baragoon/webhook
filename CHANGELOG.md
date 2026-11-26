@@ -2,6 +2,13 @@
 
 <!-- markdownlint-disable MD013 -->
 
+## [1.1.1](https://github.com/baragoon/webhook/compare/v1.1.0...v1.1.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* docker environment variables and polish docs ([#29](https://github.com/baragoon/webhook/issues/29)) ([7ac7313](https://github.com/baragoon/webhook/commit/7ac73136de77aecc3acf063c5de86c7553c5b3c7))
+
 ## [1.0.1](https://github.com/baragoon/webhook/compare/v1.0.0...v1.0.1) (2026-11-26)
 
 ### Bug Fixes
