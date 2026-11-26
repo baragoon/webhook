@@ -24,7 +24,7 @@ collect_cli_flags() {
 		esac
 		_cli_flags="${_cli_flags}${_cli_name}|"
 		case "$_cli_name" in
-			debug|nopanic|hotreload|secure|template|version|list-cipher-suites|x-request-id)
+			verbose|debug|nopanic|hotreload|secure|template|version|list-cipher-suites|x-request-id)
 				;;
 			*)
 				if [ "$_cli_has_value" = false ] && [ "$#" -gt 0 ]; then
