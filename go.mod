@@ -5,7 +5,7 @@ go 1.27.4
 require (
 	github.com/Microsoft/go-winio v0.6.4
 	github.com/clbanning/mxj/v2 v2.7.0
-	github.com/coreos/go-systemd/v22 v22.5.0
+	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/ghodss/yaml v1.0.0
