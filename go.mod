@@ -1,8 +1,6 @@
 module github.com/adnanh/webhook
 
-go 1.21
-
-toolchain go1.22.0
+go 1.25.0
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
@@ -14,7 +12,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/gofrs/uuid/v5 v5.0.0
 	github.com/gorilla/mux v1.8.1
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.44.0
 )
 
 require (
