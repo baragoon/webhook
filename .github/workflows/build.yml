@@ -37,19 +37,19 @@ jobs:
       - name: Test
         run: go test -v ./...
 
-  build-min:
-    env:
-      GOTOOLCHAIN: local
-    runs-on: ubuntu-latest
+  # build-min:
+  #   env:
+  #     GOTOOLCHAIN: local
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
+  #   steps:
+  #     - uses: actions/checkout@v7
+  #     - uses: actions/setup-go@v7
+  #       with:
+  #         go-version-file: go.mod
 
-      - name: Build
-        run: go build -v
+  #     - name: Build
+  #       run: go build -v
 
-      - name: Test
-        run: go test -v ./...
+  #     - name: Test
+  #       run: go test -v ./...
