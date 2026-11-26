@@ -6,12 +6,26 @@
     ":semanticCommits"
   ],
   "osvVulnerabilityAlerts": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github\\/workflows\\/build\\.yml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)(?: versioning=(?<versioning>.*?))?\\s+go-version: \\[(?<currentValue>\\d+\\.\\d+\\.\\d+)\\]"
+      ]
+    }
+  ],
   "packageRules": [
     {
       "matchManagers": ["gomod"],
       "matchDepNames": ["go"],
       "matchDepTypes": ["golang"],
       "rangeStrategy": "bump",
+      "groupName": "go toolchain"
+    },
+    {
+      "matchManagers": ["custom.regex"],
+      "matchDepNames": ["go"],
       "groupName": "go toolchain"
     }
   ]
