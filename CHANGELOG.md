@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.1](https://github.com/baragoon/webhook/compare/v1.0.0...v1.0.1) (2026-11-26)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/gofrs/uuid/v5 to v5.5.1 ([#16](https://github.com/baragoon/webhook/issues/16)) ([fabbbb6](https://github.com/baragoon/webhook/commit/fabbbb6f2add54497eba894316c3b0f11dd9c341))
+* **release:** protect shared Docker tags ([#26](https://github.com/baragoon/webhook/issues/26)) ([2a2352a](https://github.com/baragoon/webhook/commit/2a2352a98aeb29a4aa24d1be71ab6dea925aef1a))
+* **release:** publish Docker semver tags ([#24](https://github.com/baragoon/webhook/issues/24)) ([45783cd](https://github.com/baragoon/webhook/commit/45783cdaa277d66f36543eb5e17cf07c1ce98538))
+
 ## 1.0.0 (2026-11-26)
 
 
