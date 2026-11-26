@@ -24,11 +24,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const (
-	version = "2.8.3"
-)
-
 var (
+	version            = "2.8.3"
 	ip                 = flag.String("ip", "0.0.0.0", "ip the webhook should serve hooks on")
 	port               = flag.Int("port", 9000, "port the webhook should serve hooks on")
 	verbose            = flag.Bool("verbose", false, "show verbose output")
@@ -767,19 +764,6 @@ func watchForFileChange() {
 			log.Println("watcher error:", err)
 		}
 	}
-}
-
-// valuesToMap converts map[string][]string to a map[string]string object
-func valuesToMap(values map[string][]string) map[string]interface{} {
-	ret := make(map[string]interface{})
-
-	for key, value := range values {
-		if len(value) > 0 {
-			ret[key] = value[0]
-		}
-	}
-
-	return ret
 }
 
 // makeRoutePattern builds a pattern matching URL for the mux.
