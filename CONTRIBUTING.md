@@ -24,6 +24,16 @@ Any code change should be submitted as a pull request. The description should ex
 The bigger the pull request, the longer it will take to review and merge. Try to break down large pull requests in smaller chunks that are easier to review and merge.
 It is also always helpful to have some context for your pull request. What was the purpose? Why does it matter to you?
 
+## Release automation
+
+Release Please uses a GitHub App token so checks on its release pull requests can run without manual approval. Repository administrators must:
+
+1. [Create a GitHub App](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app) with read and write repository permissions for Contents, Issues, and Pull requests.
+2. Install the app on this repository and generate a private key.
+3. Under Settings > Secrets and variables > Actions, add the app's client ID as the repository variable `APP_CLIENT_ID` and its private key as the repository secret `APP_PRIVATE_KEY`.
+
+These settings must be in place before the release workflow runs. Existing approval-required runs still need manual approval.
+
 ## Financial contributions
 
 We also welcome financial contributions in full transparency on our [open collective](https://opencollective.com/webhook).
