@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/baragoon/webhook/compare/v1.0.1...v1.1.0) (2026-11-26)
+
+
+### Features
+
+* **docker:** support WEBHOOK environment variables ([#27](https://github.com/baragoon/webhook/issues/27)) ([8ff495c](https://github.com/baragoon/webhook/commit/8ff495c0ee79aa2cfb21db09e26c8eb716da3136))
+
 ## [1.0.1](https://github.com/baragoon/webhook/compare/v1.0.0...v1.0.1) (2026-11-26)
 
 
