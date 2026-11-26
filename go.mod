@@ -10,7 +10,7 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-chi/chi/v5 v5.5.0
-	github.com/gofrs/uuid/v5 v5.0.0
+	github.com/gofrs/uuid/v5 v5.5.1
 	github.com/gorilla/mux v1.8.1
 	golang.org/x/sys v0.50.0
 )
