@@ -72,24 +72,6 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           outputs: type=image,name=${{ steps.image.outputs.name }},push-by-digest=true,name-canonical=true,push=true
 
-      - name: Determine whether this is the latest release
-        id: latest
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.release_please.outputs.tag_name }}
-        run: |
-          latest_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
-          if [[ -z "$latest_tag" ]]; then
-            echo "GitHub returned an empty latest release tag" >&2
-            exit 1
-          fi
-
-          if [[ "$RELEASE_TAG" == "$latest_tag" ]]; then
-            echo "is_latest=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_latest=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Normalize Docker release tag
         id: docker-tag
         env:
@@ -117,26 +99,20 @@ jobs:
           TAGS: ${{ steps.meta.outputs.tags }}
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.release_please.outputs.tag_name }}
-          INITIAL_IS_LATEST: ${{ steps.latest.outputs.is_latest }}
           DOCKER_SAFE_RELEASE_TAG: ${{ steps.docker-tag.outputs.docker_safe_release_tag }}
         run: |
           set -euo pipefail
 
           for attempt in 1 2 3; do
-            if (( attempt > 1 )); then
-              latest_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"
+            is_latest=false
+            if latest_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name)"; then
               if [[ -z "$latest_tag" ]]; then
-                echo "GitHub returned an empty latest release tag" >&2
-                exit 1
-              fi
-
-              if [[ "$RELEASE_TAG" == "$latest_tag" ]]; then
+                echo "::warning::GitHub returned an empty latest release tag; publishing only $DOCKER_SAFE_RELEASE_TAG"
+              elif [[ "$RELEASE_TAG" == "$latest_tag" ]]; then
                 is_latest=true
-              else
-                is_latest=false
               fi
             else
-              is_latest="$INITIAL_IS_LATEST"
+              echo "::warning::Unable to determine the latest release; publishing only $DOCKER_SAFE_RELEASE_TAG"
             fi
 
             if [[ "$is_latest" == "true" ]]; then
