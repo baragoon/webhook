@@ -121,7 +121,7 @@ If you want to set CORS headers, you can use the `-header name=value` flag while
 On platforms that use [systemd](https://systemd.io), [webhook][w] supports the _socket activation_ mechanism.  If [webhook][w] detects that it has been launched from a systemd-managed socket it will automatically use that instead of opening its own listening port.  See [the systemd page](docs/Systemd-Activation.md) for full details.
 
 ## Interested in running webhook inside of a Docker container?
-Release images are available for Linux amd64 and arm64 at `ghcr.io/baragoon/webhook`, tagged with the release tag and `latest`. For example:
+Release images are available for Linux amd64 and arm64 at `ghcr.io/baragoon/webhook`, tagged with the full release version (`vX.Y.Z`), its major and minor aliases (`vX` and `vX.Y`), and `latest`. For example:
 
 ```bash
 docker run --rm -p 9000:9000 \

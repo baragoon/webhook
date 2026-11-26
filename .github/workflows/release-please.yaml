@@ -46,6 +46,16 @@ jobs:
         id: image
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=semver,pattern={{raw}},value=${{ needs.release_please.outputs.tag_name }}
+            type=semver,pattern=v{{major}},value=${{ needs.release_please.outputs.tag_name }}
+            type=semver,pattern=v{{major}}.{{minor}},value=${{ needs.release_please.outputs.tag_name }}
+
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
 
       - uses: docker/setup-buildx-action@v3
@@ -64,8 +74,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             VERSION=${{ needs.release_please.outputs.tag_name }}
-          tags: |
-            ${{ steps.image.outputs.name }}:${{ needs.release_please.outputs.tag_name }}
-            ${{ steps.image.outputs.name }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
