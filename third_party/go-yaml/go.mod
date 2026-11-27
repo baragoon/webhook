@@ -1,3 +1,3 @@
 module go.yaml.in/yaml/v2
 
-go 1.21
+go 1.27.4
