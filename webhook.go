@@ -300,25 +300,67 @@ func main() {
 	log.Print(svr.ServeTLS(ln, *cert, *key))
 }
 
-func newRouter(prefix *string, handler http.HandlerFunc, middlewares ...func(http.Handler) http.Handler) *http.ServeMux {
+func newRouter(prefix *string, handler http.HandlerFunc, middlewares ...func(http.Handler) http.Handler) http.Handler {
 	r := http.NewServeMux()
 
-	r.Handle("/{$}", withMiddleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	r.HandleFunc("/{$}", func(w http.ResponseWriter, req *http.Request) {
 		for _, responseHeader := range responseHeaders {
 			w.Header().Set(responseHeader.Name, responseHeader.Value)
 		}
 
 		fmt.Fprint(w, "OK")
-	}), middlewares...))
+	})
 
-	r.Handle(makeRoutePattern(prefix), withMiddleware(handler, middlewares...))
+	r.Handle(makeRoutePattern(prefix), handler)
 
 	if base := makeRouteBaseURL(prefix); base != "" {
 		// Avoid ServeMux redirecting the bare prefix to the hook subtree.
 		r.HandleFunc(base, http.NotFound)
 	}
 
-	return r
+	route := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		path := req.URL.EscapedPath()
+		segments := strings.Split(strings.TrimPrefix(path, "/"), "/")
+		// ServeMux cleans literal dot segments and repeated slashes before matching.
+		unclean := false
+		for i, segment := range segments {
+			if segment == "." || segment == ".." || (segment == "" && i < len(segments)-1) {
+				unclean = true
+				break
+			}
+		}
+		if !unclean {
+			r.ServeHTTP(w, req)
+			return
+		}
+
+		var prefixSegments []string
+		if prefix != nil {
+			if normalized := strings.TrimRight(*prefix, "/"); normalized != "" {
+				prefixSegments = strings.Split(normalized, "/")
+			}
+		}
+		if len(segments) <= len(prefixSegments) {
+			http.NotFound(w, req)
+			return
+		}
+		for i, segment := range prefixSegments {
+			decoded, err := url.PathUnescape(segments[i])
+			if err != nil || decoded != segment {
+				http.NotFound(w, req)
+				return
+			}
+		}
+		id, err := url.PathUnescape(strings.Join(segments[len(prefixSegments):], "/"))
+		if err != nil {
+			http.NotFound(w, req)
+			return
+		}
+		req.SetPathValue("id", id)
+		handler.ServeHTTP(w, req)
+	})
+
+	return withMiddleware(route, middlewares...)
 }
 
 func hookHandler(w http.ResponseWriter, r *http.Request) {
@@ -799,16 +841,7 @@ func makeRouteBaseURL(prefix *string) string {
 
 // makeHumanPattern builds a human-friendly URL for display.
 func makeHumanPattern(prefix *string) string {
-	return makeBaseURL(prefix) + "/{id}"
-}
-
-// makeBaseURL creates the base URL before any mux pattern matching.
-func makeBaseURL(prefix *string) string {
-	if prefix == nil || *prefix == "" {
-		return ""
-	}
-
-	return "/" + *prefix
+	return makeRouteBaseURL(prefix) + "/{id}"
 }
 
 func withMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {

@@ -34,24 +34,34 @@ func TestRouter(t *testing.T) {
 		{name: "root", prefix: "hooks", path: "/", status: http.StatusOK, body: "OK", middleware: true},
 		{name: "hook", prefix: "hooks", path: "/hooks/deploy", status: http.StatusOK, body: "deploy", middleware: true},
 		{name: "trailing slash in prefix", prefix: "api/hooks/", path: "/api/hooks/deploy", status: http.StatusOK, body: "deploy", middleware: true},
+		{name: "trailing slash in prefix and unclean ID", prefix: "api/hooks/", path: "/api/hooks/deploy//staging", status: http.StatusOK, body: "deploy//staging", middleware: true},
 		{name: "configured prefix", prefix: "hooks", path: "/hooks/deploy/staging", status: http.StatusOK, body: "deploy/staging", middleware: true},
 		{name: "encoded slash in ID", prefix: "hooks", path: "/hooks/deploy%2Fstaging", status: http.StatusOK, body: "deploy/staging", middleware: true},
+		{name: "repeated slash in ID", prefix: "hooks", path: "/hooks/deploy//staging", status: http.StatusOK, body: "deploy//staging", middleware: true},
+		{name: "dot in ID", prefix: "hooks", path: "/hooks/deploy/./staging", status: http.StatusOK, body: "deploy/./staging", middleware: true},
+		{name: "dot dot in ID", prefix: "hooks", path: "/hooks/deploy/../staging", status: http.StatusOK, body: "deploy/../staging", middleware: true},
+		{name: "leading slash in ID", prefix: "hooks", path: "/hooks//deploy%2Fstaging", status: http.StatusOK, body: "/deploy/staging", middleware: true},
+		{name: "unclean unrelated path", prefix: "hooks", path: "/other/../hooks/deploy", status: http.StatusNotFound, body: "404 page not found\n", middleware: true},
+		{name: "encoded slash does not match prefix", prefix: "api/hooks", path: "/api%2Fhooks//deploy", status: http.StatusNotFound, body: "404 page not found\n", middleware: true},
 		{name: "empty ID", prefix: "hooks", path: "/hooks/", status: http.StatusOK, middleware: true},
-		{name: "prefix without slash", prefix: "hooks", path: "/hooks", status: http.StatusNotFound, body: "404 page not found\n"},
-		{name: "unknown path", prefix: "hooks", path: "/other", status: http.StatusNotFound, body: "404 page not found\n"},
-		{name: "nested prefix without slash", prefix: "api/hooks", path: "/api/hooks", status: http.StatusNotFound, body: "404 page not found\n"},
+		{name: "prefix without slash", prefix: "hooks", path: "/hooks", status: http.StatusNotFound, body: "404 page not found\n", middleware: true},
+		{name: "unknown path", prefix: "hooks", path: "/other", status: http.StatusNotFound, body: "404 page not found\n", middleware: true},
+		{name: "nested prefix without slash", prefix: "api/hooks", path: "/api/hooks", status: http.StatusNotFound, body: "404 page not found\n", middleware: true},
 		{name: "literal braces", prefix: "api/{env}", path: "/api/%7Benv%7D/deploy/staging", status: http.StatusOK, body: "deploy/staging", middleware: true},
-		{name: "literal braces bare prefix", prefix: "api/{env}", path: "/api/%7Benv%7D", status: http.StatusNotFound, body: "404 page not found\n"},
-		{name: "braces do not form wildcard", prefix: "api/{env}", path: "/api/prod/deploy", status: http.StatusNotFound, body: "404 page not found\n"},
+		{name: "literal braces bare prefix", prefix: "api/{env}", path: "/api/%7Benv%7D", status: http.StatusNotFound, body: "404 page not found\n", middleware: true},
+		{name: "braces do not form wildcard", prefix: "api/{env}", path: "/api/prod/deploy", status: http.StatusNotFound, body: "404 page not found\n", middleware: true},
+		{name: "escaped prefix and unclean ID", prefix: "api/{env}", path: "/api/%7Benv%7D/./deploy", status: http.StatusOK, body: "./deploy", middleware: true},
 		{name: "literal percent and space", prefix: "api/100% ready", path: "/api/100%25%20ready/deploy", status: http.StatusOK, body: "deploy", middleware: true},
 		{name: "literal question mark", prefix: "api/a?b", path: "/api/a%3Fb/deploy", status: http.StatusOK, body: "deploy", middleware: true},
 		{name: "empty prefix", path: "/deploy/staging", status: http.StatusOK, body: "deploy/staging", middleware: true},
+		{name: "empty prefix unclean ID", path: "/deploy/../staging", status: http.StatusOK, body: "deploy/../staging", middleware: true},
+		{name: "slash prefix unclean ID", prefix: "/", path: "/deploy/../staging", status: http.StatusOK, body: "deploy/../staging", middleware: true},
 		{name: "empty prefix root", path: "/", status: http.StatusOK, body: "OK", middleware: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			middleware := func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.Header().Set("X-Test-Middleware", "applied")
+					w.Header().Add("X-Test-Middleware", "applied")
 					next.ServeHTTP(w, r)
 				})
 			}
@@ -71,7 +81,28 @@ func TestRouter(t *testing.T) {
 			if got := response.Header().Get("X-Test-Middleware") != ""; got != tt.middleware {
 				t.Errorf("expected middleware applied: %t, got %t", tt.middleware, got)
 			}
+			if got := len(response.Header().Values("X-Test-Middleware")); tt.middleware && got != 1 {
+				t.Errorf("expected middleware once, got %d", got)
+			}
 		})
+	}
+}
+
+func TestMakeHumanPattern(t *testing.T) {
+	for _, tt := range []struct {
+		prefix string
+		want   string
+	}{
+		{"", "/{id}"},
+		{"hooks", "/hooks/{id}"},
+		{"api/a?b #%", "/api/a%3Fb%20%23%25/{id}"},
+	} {
+		if got := makeHumanPattern(&tt.prefix); got != tt.want {
+			t.Errorf("makeHumanPattern(%q) = %q, want %q", tt.prefix, got, tt.want)
+		}
+	}
+	if got := makeHumanPattern(nil); got != "/{id}" {
+		t.Errorf("makeHumanPattern(nil) = %q, want /{id}", got)
 	}
 }
 
