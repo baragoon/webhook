@@ -82,7 +82,9 @@ There are four types of request values:
 
     Referencing XML payload parameters is much like the JSON examples above, but XML is more complex.
     Element attributes are prefixed by a hyphen (`-`).
-    Element values are prefixed by a pound (`#`).
+    When an element has attributes or child elements, its nonempty text is available under `#text`;
+    otherwise, its text is the element's value.
+    Element and attribute names use their local names without namespace prefixes.
 
     Take the following XML payload:
 
@@ -99,10 +101,10 @@ There are four types of request values:
     ```
 
     To access a given `user` element, you must treat them as an array.
-    So `app.users.user.0.name` yields `Jeff`.
+    So `app.users.user.0.-name` yields `Jeff`.
 
     Since there's only one `message` tag, it's not treated as an array.
-    So `app.messages.message.id` yields `1`.
+    So `app.messages.message.-id` yields `1`.
 
     To access the text within the `message` tag, you would use: `app.messages.message.#text`.
 

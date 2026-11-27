@@ -3,12 +3,12 @@ package hook
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"unicode"
-
-	"github.com/clbanning/mxj/v2"
 )
 
 // Request represents a webhook request.
@@ -108,12 +108,77 @@ func (r *Request) ParseFormPayload() error {
 }
 
 func (r *Request) ParseXMLPayload() error {
-	var err error
-
-	r.Payload, err = mxj.NewMapXmlReader(bytes.NewReader(r.Body))
+	payload, err := xmlPayload(r.Body)
 	if err != nil {
-		return fmt.Errorf("error parsing XML payload: %+v", err)
+		r.Payload = nil
+		return fmt.Errorf("error parsing XML payload: %w", err)
 	}
 
+	r.Payload = payload
 	return nil
+}
+
+func xmlPayload(body []byte) (map[string]interface{}, error) {
+	type element struct {
+		name   string
+		fields map[string]interface{}
+		text   string
+	}
+
+	decoder := xml.NewDecoder(bytes.NewReader(body))
+	var stack []element
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			return nil, err
+		}
+
+		switch token := token.(type) {
+		case xml.StartElement:
+			node := element{name: token.Name.Local, fields: make(map[string]interface{})}
+			for _, attr := range token.Attr {
+				node.fields["-"+attr.Name.Local] = attr.Value
+			}
+			stack = append(stack, node)
+		case xml.CharData:
+			if len(stack) == 0 {
+				continue
+			}
+			text := strings.Trim(string(token), "\t\r\b\n ")
+			if text == "" {
+				continue
+			}
+			node := &stack[len(stack)-1]
+			if len(node.fields) == 0 {
+				node.text = text
+			} else {
+				node.fields["#text"] = text
+			}
+		case xml.EndElement:
+			node := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			var value interface{} = node.text
+			if len(node.fields) > 0 {
+				if node.text != "" {
+					// Preserve text preceding child elements for compatibility.
+					node.fields["#text"] = node.text
+				}
+				value = node.fields
+			}
+			if len(stack) == 0 {
+				return map[string]interface{}{node.name: value}, nil
+			}
+
+			parent := &stack[len(stack)-1]
+			if previous, ok := parent.fields[node.name]; ok {
+				if values, ok := previous.([]interface{}); ok {
+					parent.fields[node.name] = append(values, value)
+				} else {
+					parent.fields[node.name] = []interface{}{previous, value}
+				}
+			} else {
+				parent.fields[node.name] = value
+			}
+		}
+	}
 }

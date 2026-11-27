@@ -5,9 +5,6 @@ github.com/Microsoft/go-winio/internal/fs
 github.com/Microsoft/go-winio/internal/socket
 github.com/Microsoft/go-winio/internal/stringbuffer
 github.com/Microsoft/go-winio/pkg/guid
-# github.com/clbanning/mxj/v2 v2.7.0
-## explicit; go 1.15
-github.com/clbanning/mxj/v2
 # github.com/coreos/go-systemd/v22 v22.7.0
 ## explicit; go 1.23
 github.com/coreos/go-systemd/v22/activation
@@ -28,8 +25,6 @@ github.com/go-chi/chi/v5/middleware
 # github.com/gofrs/uuid/v5 v5.5.1
 ## explicit; go 1.25
 github.com/gofrs/uuid/v5
-# github.com/google/go-cmp v0.6.0
-## explicit; go 1.13
 # github.com/kr/pretty v0.1.0
 ## explicit
 # golang.org/x/sys v0.50.0
