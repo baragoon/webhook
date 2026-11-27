@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -122,10 +123,13 @@ func xmlPayload(body []byte) (map[string]interface{}, error) {
 	type element struct {
 		name   string
 		fields map[string]interface{}
-		text   string
+		text   []string
 	}
 
 	decoder := xml.NewDecoder(bytes.NewReader(body))
+	decoder.CharsetReader = func(charset string, _ io.Reader) (io.Reader, error) {
+		return nil, fmt.Errorf("unsupported XML encoding %q (only UTF-8 is supported)", charset)
+	}
 	var stack []element
 	for {
 		token, err := decoder.Token()
@@ -135,33 +139,25 @@ func xmlPayload(body []byte) (map[string]interface{}, error) {
 
 		switch token := token.(type) {
 		case xml.StartElement:
-			node := element{name: token.Name.Local, fields: make(map[string]interface{})}
+			node := element{name: xmlName(token.Name), fields: make(map[string]interface{})}
 			for _, attr := range token.Attr {
-				node.fields["-"+attr.Name.Local] = attr.Value
+				node.fields["-"+xmlName(attr.Name)] = attr.Value
 			}
 			stack = append(stack, node)
 		case xml.CharData:
 			if len(stack) == 0 {
 				continue
 			}
-			text := strings.Trim(string(token), "\t\r\b\n ")
-			if text == "" {
-				continue
-			}
 			node := &stack[len(stack)-1]
-			if len(node.fields) == 0 {
-				node.text = text
-			} else {
-				node.fields["#text"] = text
-			}
+			node.text = append(node.text, string(token))
 		case xml.EndElement:
 			node := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
-			var value interface{} = node.text
+			text := strings.Trim(strings.Join(node.text, ""), "\t\r\b\n ")
+			var value interface{} = text
 			if len(node.fields) > 0 {
-				if node.text != "" {
-					// Preserve text preceding child elements for compatibility.
-					node.fields["#text"] = node.text
+				if text != "" {
+					node.fields["#text"] = text
 				}
 				value = node.fields
 			}
@@ -181,4 +177,13 @@ func xmlPayload(body []byte) (map[string]interface{}, error) {
 			}
 		}
 	}
+}
+
+func xmlName(name xml.Name) string {
+	if name.Space == "" {
+		return name.Local
+	}
+	namespace := strings.ReplaceAll(url.QueryEscape(name.Space), ".", "%2E")
+	local := strings.ReplaceAll(name.Local, ".", "%2E")
+	return "{" + namespace + "}" + local
 }
