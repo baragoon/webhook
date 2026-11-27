@@ -36,9 +36,13 @@ API documentation
 
 Upstream API documentation: <https://pkg.go.dev/go.yaml.in/yaml/v2>
 
-To test this local fork from the repository root, run:
+The local fork is incomplete until the follow-up staging changes are added,
+so it cannot be tested on its own yet. To test the application from the
+repository root in the meantime, run:
 
-    cd third_party/go-yaml && go test ./...
+    go test ./...
+
+This command does not test the staged fork.
 
 API stability
 -------------
@@ -139,4 +143,3 @@ b:
   - 3
   - 4
 ```
-

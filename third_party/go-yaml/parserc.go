@@ -215,7 +215,6 @@ func yaml_parser_parse_document_start(parser *yaml_parser_t, event *yaml_event_t
 	// Parse extra document end indicators.
 	if !implicit {
 		for token.typ == yaml_DOCUMENT_END_TOKEN {
-			parser.explicit_document_end = true
 			skip_token(parser)
 			token = peek_token(parser)
 			if token == nil {
@@ -224,9 +223,7 @@ func yaml_parser_parse_document_start(parser *yaml_parser_t, event *yaml_event_t
 		}
 	}
 
-	allowImplicit := implicit || parser.explicit_document_end
-	parser.explicit_document_end = false
-	if allowImplicit && token.typ != yaml_VERSION_DIRECTIVE_TOKEN &&
+	if implicit && token.typ != yaml_VERSION_DIRECTIVE_TOKEN &&
 		token.typ != yaml_TAG_DIRECTIVE_TOKEN &&
 		token.typ != yaml_DOCUMENT_START_TOKEN &&
 		token.typ != yaml_STREAM_END_TOKEN {
@@ -331,8 +328,6 @@ func yaml_parser_parse_document_end(parser *yaml_parser_t, event *yaml_event_t) 
 		skip_token(parser)
 		implicit = false
 	}
-	parser.explicit_document_end = !implicit
-
 	parser.tag_directives = parser.tag_directives[:0]
 
 	parser.state = yaml_PARSE_DOCUMENT_START_STATE
