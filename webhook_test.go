@@ -33,6 +33,7 @@ func TestRouter(t *testing.T) {
 	}{
 		{name: "root", prefix: "hooks", path: "/", status: http.StatusOK, body: "OK", middleware: true},
 		{name: "hook", prefix: "hooks", path: "/hooks/deploy", status: http.StatusOK, body: "deploy", middleware: true},
+		{name: "trailing slash in prefix", prefix: "api/hooks/", path: "/api/hooks/deploy", status: http.StatusOK, body: "deploy", middleware: true},
 		{name: "configured prefix", prefix: "hooks", path: "/hooks/deploy/staging", status: http.StatusOK, body: "deploy/staging", middleware: true},
 		{name: "encoded slash in ID", prefix: "hooks", path: "/hooks/deploy%2Fstaging", status: http.StatusOK, body: "deploy/staging", middleware: true},
 		{name: "empty ID", prefix: "hooks", path: "/hooks/", status: http.StatusOK, middleware: true},

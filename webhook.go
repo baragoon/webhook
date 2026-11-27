@@ -786,7 +786,11 @@ func makeRouteBaseURL(prefix *string) string {
 	if prefix == nil || *prefix == "" {
 		return ""
 	}
-	segments := strings.Split(*prefix, "/")
+	normalizedPrefix := strings.TrimRight(*prefix, "/")
+	if normalizedPrefix == "" {
+		return ""
+	}
+	segments := strings.Split(normalizedPrefix, "/")
 	for i, segment := range segments {
 		segments[i] = url.PathEscape(segment)
 	}
