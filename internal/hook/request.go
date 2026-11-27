@@ -3,12 +3,13 @@ package hook
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"unicode"
-
-	"github.com/clbanning/mxj/v2"
 )
 
 // Request represents a webhook request.
@@ -108,12 +109,81 @@ func (r *Request) ParseFormPayload() error {
 }
 
 func (r *Request) ParseXMLPayload() error {
-	var err error
-
-	r.Payload, err = mxj.NewMapXmlReader(bytes.NewReader(r.Body))
+	payload, err := xmlPayload(r.Body)
 	if err != nil {
-		return fmt.Errorf("error parsing XML payload: %+v", err)
+		r.Payload = nil
+		return fmt.Errorf("error parsing XML payload: %w", err)
 	}
 
+	r.Payload = payload
 	return nil
+}
+
+func xmlPayload(body []byte) (map[string]interface{}, error) {
+	type element struct {
+		name   string
+		fields map[string]interface{}
+		text   []string
+	}
+
+	decoder := xml.NewDecoder(bytes.NewReader(body))
+	decoder.CharsetReader = func(charset string, _ io.Reader) (io.Reader, error) {
+		return nil, fmt.Errorf("unsupported XML encoding %q (only UTF-8 is supported)", charset)
+	}
+	var stack []element
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			return nil, err
+		}
+
+		switch token := token.(type) {
+		case xml.StartElement:
+			node := element{name: xmlName(token.Name), fields: make(map[string]interface{})}
+			for _, attr := range token.Attr {
+				node.fields["-"+xmlName(attr.Name)] = attr.Value
+			}
+			stack = append(stack, node)
+		case xml.CharData:
+			if len(stack) == 0 {
+				continue
+			}
+			node := &stack[len(stack)-1]
+			node.text = append(node.text, string(token))
+		case xml.EndElement:
+			node := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			text := strings.Trim(strings.Join(node.text, ""), "\t\r\b\n ")
+			var value interface{} = text
+			if len(node.fields) > 0 {
+				if text != "" {
+					node.fields["#text"] = text
+				}
+				value = node.fields
+			}
+			if len(stack) == 0 {
+				return map[string]interface{}{node.name: value}, nil
+			}
+
+			parent := &stack[len(stack)-1]
+			if previous, ok := parent.fields[node.name]; ok {
+				if values, ok := previous.([]interface{}); ok {
+					parent.fields[node.name] = append(values, value)
+				} else {
+					parent.fields[node.name] = []interface{}{previous, value}
+				}
+			} else {
+				parent.fields[node.name] = value
+			}
+		}
+	}
+}
+
+func xmlName(name xml.Name) string {
+	if name.Space == "" {
+		return name.Local
+	}
+	namespace := strings.ReplaceAll(url.QueryEscape(name.Space), ".", "%2E")
+	local := strings.ReplaceAll(name.Local, ".", "%2E")
+	return "{" + namespace + "}" + local
 }
