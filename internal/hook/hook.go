@@ -781,14 +781,14 @@ func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
 		file = buf.Bytes()
 	}
 
-	// Account for older sigs.k8s.io/yaml versions when modules are used without vendoring.
-	target := h
+	// Decode independently so failed loads leave existing hooks unchanged.
+	var loaded Hooks
+	// Retain the pointer indirection for null handling in older YAML versions.
+	target := &loaded
 	if err := yaml.Unmarshal(file, &target); err != nil {
 		return err
 	}
-	if target == nil {
-		*h = nil
-	}
+	*h = loaded
 	return nil
 }
 
