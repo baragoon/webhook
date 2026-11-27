@@ -84,16 +84,22 @@ There are four types of request values:
     Element attributes are prefixed by a hyphen (`-`).
     When an element has attributes or child elements, its nonempty text is available under `#text`;
     otherwise, its text is the element's value.
-    Text segments separated by comments, CDATA, or child elements are concatenated in document order,
-    then leading and trailing whitespace is trimmed.
-    Only UTF-8 XML is supported; other declared encodings are rejected.
+    Namespaced element and attribute names use `{URI}local-name`, where the URI
+    and local name are URL query-escaped and dots are escaped as `%2E` so they
+    can be used in dot paths. For example, an element `p:item` in namespace
+    `https://example.com/a` is referenced as
+    `{https%3A%2F%2Fexample%2Ecom%2Fa}item`; an attribute in that namespace
+    uses the same notation after the `-` prefix. Prefixes bound to the same URI
+    identify the same namespace. Unnamespaced names remain unchanged.
+    Namespace declarations are represented as attributes, such as `-xmlns` for
+    a default namespace or
+    `-{http%3A%2F%2Fwww%2Ew3%2Eorg%2F2000%2Fxmlns%2F}p` for a prefix declaration.
 
-    Unqualified element and attribute names use their local names. Names with a namespace use
-    `{namespace}local` instead, where the namespace URI is URL query-escaped and any remaining
-    dots in the escaped URI or local name are encoded as `%2E` for dot-notation access.
-    For example, an element named `item` in `http://example.com/ns` is referenced as
-    `{http%3A%2F%2Fexample%2Ecom%2Fns}item`. Prefixes referring to the same URI identify
-    the same name. Namespace declarations use `-{xmlns}prefix` (or `-xmlns` for the default).
+    Text fragments within an element are concatenated in document order, with
+    leading and trailing whitespace trimmed. The XML document must contain one
+    root element; only whitespace, comments, and processing instructions may
+    follow it. Declared encodings supported by the IANA encoding registry are
+    converted to UTF-8.
 
     Take the following XML payload:
 

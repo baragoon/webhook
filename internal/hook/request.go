@@ -10,6 +10,9 @@ import (
 	"net/url"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/encoding/ianaindex"
+	textunicode "golang.org/x/text/encoding/unicode"
 )
 
 // Request represents a webhook request.
@@ -121,39 +124,141 @@ func (r *Request) ParseXMLPayload() error {
 
 func xmlPayload(body []byte) (map[string]interface{}, error) {
 	type element struct {
-		name   string
-		fields map[string]interface{}
-		text   []string
+		name       string
+		rawName    xml.Name
+		namespaces map[string]string
+		fields     map[string]interface{}
+		text       []byte
 	}
 
-	decoder := xml.NewDecoder(bytes.NewReader(body))
-	decoder.CharsetReader = func(charset string, _ io.Reader) (io.Reader, error) {
-		return nil, fmt.Errorf("unsupported XML encoding %q (only UTF-8 is supported)", charset)
+	var input io.Reader = bytes.NewReader(body)
+	var utf16Order string
+	if len(body) >= 2 {
+		switch {
+		case bytes.HasPrefix(body, []byte{0xfe, 0xff}):
+			utf16Order, body = "utf-16be", body[2:]
+		case bytes.HasPrefix(body, []byte{0xff, 0xfe}):
+			utf16Order, body = "utf-16le", body[2:]
+		case len(body) >= 4 && body[0] == 0 && body[1] == '<' && body[2] == 0:
+			utf16Order = "utf-16be"
+		case len(body) >= 4 && body[0] == '<' && body[1] == 0 && body[3] == 0:
+			utf16Order = "utf-16le"
+		}
 	}
+	if utf16Order != "" {
+		order := textunicode.BigEndian
+		if utf16Order == "utf-16le" {
+			order = textunicode.LittleEndian
+		}
+		input = textunicode.UTF16(order, textunicode.IgnoreBOM).NewDecoder().Reader(bytes.NewReader(body))
+	}
+	decoder := xml.NewDecoder(input)
+	decoder.CharsetReader = func(label string, input io.Reader) (io.Reader, error) {
+		if utf16Order != "" {
+			if strings.EqualFold(label, "utf-16") || strings.EqualFold(label, utf16Order) {
+				return input, nil
+			}
+			return nil, fmt.Errorf("XML encoding %q does not match %s input", label, utf16Order)
+		}
+		encoding, err := ianaindex.IANA.Encoding(label)
+		if err != nil {
+			return nil, err
+		}
+		if encoding == nil {
+			return nil, fmt.Errorf("unsupported XML encoding %q", label)
+		}
+		return encoding.NewDecoder().Reader(input), nil
+	}
+	var payload map[string]interface{}
 	var stack []element
 	for {
-		token, err := decoder.Token()
+		token, err := decoder.RawToken()
 		if err != nil {
+			if err == io.EOF {
+				if len(stack) != 0 {
+					return nil, io.ErrUnexpectedEOF
+				}
+				if payload != nil {
+					return payload, nil
+				}
+			}
 			return nil, err
 		}
 
 		switch token := token.(type) {
 		case xml.StartElement:
-			node := element{name: xmlName(token.Name), fields: make(map[string]interface{})}
+			if payload != nil {
+				return nil, fmt.Errorf("multiple XML root elements")
+			}
+			namespaces := map[string]string{"xml": "http://www.w3.org/XML/1998/namespace"}
+			if len(stack) > 0 {
+				for prefix, uri := range stack[len(stack)-1].namespaces {
+					namespaces[prefix] = uri
+				}
+			}
 			for _, attr := range token.Attr {
-				node.fields["-"+xmlName(attr.Name)] = attr.Value
+				if attr.Name.Space == "xmlns" {
+					if attr.Name.Local == "xmlns" || attr.Value == "" ||
+						(attr.Name.Local == "xml") != (attr.Value == "http://www.w3.org/XML/1998/namespace") ||
+						attr.Value == "http://www.w3.org/2000/xmlns/" {
+						return nil, fmt.Errorf("invalid XML namespace declaration for %q", attr.Name.Local)
+					}
+					namespaces[attr.Name.Local] = attr.Value
+				} else if attr.Name.Space == "" && attr.Name.Local == "xmlns" {
+					if attr.Value == "http://www.w3.org/2000/xmlns/" || attr.Value == "http://www.w3.org/XML/1998/namespace" {
+						return nil, fmt.Errorf("invalid default XML namespace")
+					}
+					namespaces[""] = attr.Value
+				}
+			}
+			resolve := func(name xml.Name, defaultNamespace bool) (xml.Name, error) {
+				if name.Space == "" && !defaultNamespace {
+					return name, nil
+				}
+				uri, ok := namespaces[name.Space]
+				if !ok && name.Space != "" {
+					return xml.Name{}, fmt.Errorf("undeclared XML namespace prefix %q", name.Space)
+				}
+				return xml.Name{Space: uri, Local: name.Local}, nil
+			}
+			name, err := resolve(token.Name, true)
+			if err != nil {
+				return nil, err
+			}
+			node := element{name: xmlName(name), rawName: token.Name, namespaces: namespaces, fields: make(map[string]interface{})}
+			for _, attr := range token.Attr {
+				var name xml.Name
+				if attr.Name.Space == "xmlns" {
+					name = xml.Name{Space: "http://www.w3.org/2000/xmlns/", Local: attr.Name.Local}
+				} else {
+					name, err = resolve(attr.Name, false)
+					if err != nil {
+						return nil, err
+					}
+				}
+				key := "-" + xmlName(name)
+				if _, exists := node.fields[key]; exists {
+					return nil, fmt.Errorf("duplicate XML attribute %q", key)
+				}
+				node.fields[key] = attr.Value
 			}
 			stack = append(stack, node)
 		case xml.CharData:
 			if len(stack) == 0 {
+				if payload != nil && strings.Trim(string(token), " \t\r\n") != "" {
+					return nil, fmt.Errorf("unexpected text after XML root element")
+				}
 				continue
 			}
 			node := &stack[len(stack)-1]
-			node.text = append(node.text, string(token))
+			node.text = append(node.text, token...)
 		case xml.EndElement:
+			if len(stack) == 0 || stack[len(stack)-1].rawName != token.Name {
+				return nil, fmt.Errorf("unexpected XML closing element %q", token.Name.Local)
+			}
 			node := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
-			text := strings.Trim(strings.Join(node.text, ""), "\t\r\b\n ")
+			text := strings.Trim(string(node.text), "\t\r\b\n ")
 			var value interface{} = text
 			if len(node.fields) > 0 {
 				if text != "" {
@@ -162,7 +267,8 @@ func xmlPayload(body []byte) (map[string]interface{}, error) {
 				value = node.fields
 			}
 			if len(stack) == 0 {
-				return map[string]interface{}{node.name: value}, nil
+				payload = map[string]interface{}{node.name: value}
+				continue
 			}
 
 			parent := &stack[len(stack)-1]
@@ -175,6 +281,10 @@ func xmlPayload(body []byte) (map[string]interface{}, error) {
 			} else {
 				parent.fields[node.name] = value
 			}
+		case xml.Directive:
+			if payload != nil {
+				return nil, fmt.Errorf("unexpected directive after XML root element")
+			}
 		}
 	}
 }
@@ -183,7 +293,8 @@ func xmlName(name xml.Name) string {
 	if name.Space == "" {
 		return name.Local
 	}
-	namespace := strings.ReplaceAll(url.QueryEscape(name.Space), ".", "%2E")
-	local := strings.ReplaceAll(name.Local, ".", "%2E")
-	return "{" + namespace + "}" + local
+	escape := func(s string) string {
+		return strings.ReplaceAll(url.QueryEscape(s), ".", "%2E")
+	}
+	return "{" + escape(name.Space) + "}" + escape(name.Local)
 }
