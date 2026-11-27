@@ -1,11 +1,15 @@
 package hook
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	"sigs.k8s.io/yaml"
 )
 
 func TestGetParameter(t *testing.T) {
@@ -351,20 +355,21 @@ func TestHookExtractCommandArguments(t *testing.T) {
 // we test both cases where the name of the data is used as the name of the
 // env key & the case where the hook definition sets the env var name to a
 // fixed value using the envname construct like so::
-//    [
-//      {
-//        "id": "push",
-//        "execute-command": "bb2mm",
-//        "command-working-directory": "/tmp",
-//        "pass-environment-to-command":
-//        [
-//          {
-//            "source": "entire-payload",
-//            "envname": "PAYLOAD"
-//          },
-//        ]
-//      }
-//    ]
+//
+//	[
+//	  {
+//	    "id": "push",
+//	    "execute-command": "bb2mm",
+//	    "command-working-directory": "/tmp",
+//	    "pass-environment-to-command":
+//	    [
+//	      {
+//	        "source": "entire-payload",
+//	        "envname": "PAYLOAD"
+//	      },
+//	    ]
+//	  }
+//	]
 var hookExtractCommandArgumentsForEnvTests = []struct {
 	exec                    string
 	args                    []Argument
@@ -435,6 +440,162 @@ func TestHooksLoadFromFile(t *testing.T) {
 		err := h.LoadFromFile(tt.path, tt.asTemplate)
 		if (err == nil) != tt.ok {
 			t.Errorf("%s", err)
+		}
+	}
+}
+
+func TestHooksLoadYAMLEquivalentToJSON(t *testing.T) {
+	var jsonHooks, yamlHooks Hooks
+	if err := jsonHooks.LoadFromFile("../../hooks.json.example", false); err != nil {
+		t.Fatal(err)
+	}
+	if err := yamlHooks.LoadFromFile("../../hooks.yaml.example", false); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(jsonHooks, yamlHooks) {
+		t.Errorf("YAML hooks differ from JSON hooks:\nYAML: %#v\nJSON: %#v", yamlHooks, jsonHooks)
+	}
+}
+
+func TestHooksLoadRejectsInvalidEncodingAfterDocument(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "hooks.yaml")
+	data := append([]byte("- id: new\n...\n"), 0xff)
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	hooks := Hooks{{ID: "existing"}}
+	err := hooks.LoadFromFile(path, false)
+	if err == nil || !strings.Contains(err.Error(), "invalid leading UTF-8 octet") {
+		t.Fatalf("load error = %v", err)
+	}
+	if len(hooks) != 1 || hooks[0].ID != "existing" {
+		t.Fatalf("hooks changed after invalid encoding: %#v", hooks)
+	}
+}
+
+func TestHooksLoadNullClearsExistingHooks(t *testing.T) {
+	var hooks Hooks
+	if err := hooks.LoadFromFile("../../hooks.yaml.example", false); err != nil {
+		t.Fatal(err)
+	}
+	if len(hooks) == 0 {
+		t.Fatal("expected populated hooks")
+	}
+	path := filepath.Join(t.TempDir(), "null.yaml")
+	if err := os.WriteFile(path, []byte("null\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := hooks.LoadFromFile(path, false); err != nil {
+		t.Fatal(err)
+	}
+	if hooks != nil {
+		t.Fatalf("hooks after null = %#v, want nil", hooks)
+	}
+}
+
+func TestHooksLoadRejectsNilReceiver(t *testing.T) {
+	var hooks *Hooks
+	for _, path := range []string{"", "../../hooks.yaml.example"} {
+		if err := hooks.LoadFromFile(path, false); err == nil {
+			t.Fatalf("nil receiver accepted for %q", path)
+		}
+	}
+}
+
+func TestHooksLoadYAMLStringCoercion(t *testing.T) {
+	for _, doc := range []string{
+		"- id: 123\n  response-message: true\n",
+		"- id: '123'\n  response-message: 'true'\n",
+	} {
+		path := filepath.Join(t.TempDir(), "hooks.yaml")
+		if err := os.WriteFile(path, []byte(doc), 0600); err != nil {
+			t.Fatal(err)
+		}
+		var hooks Hooks
+		if err := hooks.LoadFromFile(path, false); err != nil {
+			t.Fatal(err)
+		}
+		if len(hooks) != 1 || hooks[0].ID != "123" || hooks[0].ResponseMessage != "true" {
+			t.Fatalf("hooks = %#v", hooks)
+		}
+	}
+}
+
+func TestHooksLoadYAMLLegacyNumericID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "hooks.yaml")
+	if err := os.WriteFile(path, []byte("- id: 009000000\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var hooks Hooks
+	if err := hooks.LoadFromFile(path, false); err != nil || len(hooks) != 1 || hooks[0].ID != "9e+06" || hooks.Match("9e+06") == nil {
+		t.Fatalf("hooks = %#v, %v", hooks, err)
+	}
+}
+
+func TestHooksLoadYAMLDecimalStatus(t *testing.T) {
+	for _, status := range []string{"208", "0208", "08"} {
+		path := filepath.Join(t.TempDir(), "hooks.yaml")
+		if err := os.WriteFile(path, []byte("- success-http-response-code: "+status+"\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		var hooks Hooks
+		err := hooks.LoadFromFile(path, false)
+		want := 208
+		if status == "08" {
+			want = 8
+		}
+		if err != nil || len(hooks) != 1 || hooks[0].SuccessHttpResponseCode != want {
+			t.Fatalf("%s: %#v, %v", status, hooks, err)
+		}
+	}
+}
+
+func TestHooksLoadYAMLMergePrecedence(t *testing.T) {
+	for _, doc := range []string{
+		"- <<: {id: base}\n  id: chosen\n",
+		"- id: chosen\n  <<: {id: base}\n",
+		"- <<: {id: fallback}\n  ID: chosen\n",
+		"- ID: chosen\n  <<: {id: fallback}\n",
+		"- <<: [{ID: chosen}, {id: fallback}]\n",
+	} {
+		path := filepath.Join(t.TempDir(), "hooks.yaml")
+		if err := os.WriteFile(path, []byte(doc), 0600); err != nil {
+			t.Fatal(err)
+		}
+		var hooks Hooks
+		if err := hooks.LoadFromFile(path, false); err != nil || len(hooks) != 1 || hooks[0].ID != "chosen" {
+			t.Fatalf("hooks = %#v, %v", hooks, err)
+		}
+	}
+}
+
+func TestHooksLoadCompactYAML(t *testing.T) {
+	var results []Hooks
+	for _, doc := range []string{`[{"id":"deploy"}]`, `[{"id": "deploy"}]`} {
+		path := filepath.Join(t.TempDir(), "hooks.yaml")
+		if err := os.WriteFile(path, []byte(doc), 0600); err != nil {
+			t.Fatal(err)
+		}
+		var hooks Hooks
+		if err := hooks.LoadFromFile(path, false); err != nil {
+			t.Fatalf("%q: %v", doc, err)
+		}
+		results = append(results, hooks)
+	}
+	if len(results[0]) != 1 || results[0][0].ID != "deploy" || !reflect.DeepEqual(results[0], results[1]) {
+		t.Fatalf("compact and spaced hooks = %#v", results)
+	}
+}
+
+func TestYAMLConversionTimestampKeys(t *testing.T) {
+	for _, convert := range []func([]byte) ([]byte, error){yaml.YAMLToJSON, yaml.YAMLToJSONStrict} {
+		data, err := convert([]byte("2024-01-02: value\n"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got map[string]string
+		if err := json.Unmarshal(data, &got); err != nil || got["2024-01-02"] != "value" {
+			t.Fatalf("conversion = %s, %#v, %v", data, got, err)
 		}
 	}
 }

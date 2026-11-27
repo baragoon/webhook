@@ -30,13 +30,17 @@ Everything else is the responsibility of the command's author.
 
 #### Building from source
 
-To get started, first make sure you've properly set up your [Go](http://golang.org/doc/install) 1.21 or newer environment and then run
+Install [Go](https://go.dev/doc/install) at the version required by `go.mod` or newer, then build from a checkout:
 
 ```bash
-go build github.com/baragoon/webhook
+git clone https://github.com/baragoon/webhook.git
+cd webhook
+go build .
 ```
 
-to build the latest version of the [webhook][w].
+Building from the checkout uses the local YAML forks. A build from another
+main module does not apply this module's local replacements. Versioned
+`go install` rejects modules with these replacements; use the checkout build above.
 
 #### Using package manager
 

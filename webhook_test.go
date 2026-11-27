@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,6 +21,58 @@ import (
 
 	"github.com/baragoon/webhook/internal/hook"
 )
+
+func TestRouter(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		prefix     string
+		path       string
+		status     int
+		body       string
+		middleware bool
+	}{
+		{name: "root", prefix: "hooks", path: "/", status: http.StatusOK, body: "OK", middleware: true},
+		{name: "hook", prefix: "hooks", path: "/hooks/deploy", status: http.StatusOK, body: "deploy", middleware: true},
+		{name: "configured prefix", prefix: "hooks", path: "/hooks/deploy/staging", status: http.StatusOK, body: "deploy/staging", middleware: true},
+		{name: "encoded slash in ID", prefix: "hooks", path: "/hooks/deploy%2Fstaging", status: http.StatusOK, body: "deploy/staging", middleware: true},
+		{name: "empty ID", prefix: "hooks", path: "/hooks/", status: http.StatusOK, middleware: true},
+		{name: "prefix without slash", prefix: "hooks", path: "/hooks", status: http.StatusNotFound, body: "404 page not found\n"},
+		{name: "unknown path", prefix: "hooks", path: "/other", status: http.StatusNotFound, body: "404 page not found\n"},
+		{name: "nested prefix without slash", prefix: "api/hooks", path: "/api/hooks", status: http.StatusNotFound, body: "404 page not found\n"},
+		{name: "literal braces", prefix: "api/{env}", path: "/api/%7Benv%7D/deploy/staging", status: http.StatusOK, body: "deploy/staging", middleware: true},
+		{name: "literal braces bare prefix", prefix: "api/{env}", path: "/api/%7Benv%7D", status: http.StatusNotFound, body: "404 page not found\n"},
+		{name: "braces do not form wildcard", prefix: "api/{env}", path: "/api/prod/deploy", status: http.StatusNotFound, body: "404 page not found\n"},
+		{name: "literal percent and space", prefix: "api/100% ready", path: "/api/100%25%20ready/deploy", status: http.StatusOK, body: "deploy", middleware: true},
+		{name: "literal question mark", prefix: "api/a?b", path: "/api/a%3Fb/deploy", status: http.StatusOK, body: "deploy", middleware: true},
+		{name: "empty prefix", path: "/deploy/staging", status: http.StatusOK, body: "deploy/staging", middleware: true},
+		{name: "empty prefix root", path: "/", status: http.StatusOK, body: "OK", middleware: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			middleware := func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("X-Test-Middleware", "applied")
+					next.ServeHTTP(w, r)
+				})
+			}
+			mux := newRouter(&tt.prefix, func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprint(w, r.PathValue("id"))
+			}, middleware)
+
+			response := httptest.NewRecorder()
+			mux.ServeHTTP(response, httptest.NewRequest(http.MethodPost, tt.path, nil))
+
+			if response.Code != tt.status {
+				t.Fatalf("expected status %d, got %d", tt.status, response.Code)
+			}
+			if got := response.Body.String(); got != tt.body {
+				t.Errorf("expected body %q, got %q", tt.body, got)
+			}
+			if got := response.Header().Get("X-Test-Middleware") != ""; got != tt.middleware {
+				t.Errorf("expected middleware applied: %t, got %t", tt.middleware, got)
+			}
+		})
+	}
+}
 
 func TestStaticParams(t *testing.T) {
 	// FIXME(moorereason): incorporate this test into TestWebhook.

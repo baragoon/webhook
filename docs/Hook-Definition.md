@@ -2,6 +2,16 @@
 
 Hooks are defined as objects in the JSON or YAML hooks configuration file. Please note that in order to be considered valid, a hook object must contain the `id` and `execute-command` properties. All other properties are considered optional.
 
+Before upgrading, quote the previously served string values of numeric YAML
+values used in string fields, including hook IDs and static command arguments.
+Numeric conversion may otherwise change these values, particularly for large
+numbers. Do not quote fields that require numbers, such as HTTP status codes.
+
+If using YAML merges (`<<`), check all hook fields for conflicts, including
+case variants such as `ID` and `id`. Resolve each conflict by setting one
+explicit value that preserves the previously served behavior; for example,
+set `id` to its previously served value before upgrading.
+
 ## Properties (keys)
 
  * `id` - specifies the ID of your hook. This value is used to create the HTTP endpoint (http://yourserver:port/hooks/your-hook-id)

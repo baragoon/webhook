@@ -5,9 +5,6 @@ github.com/Microsoft/go-winio/internal/fs
 github.com/Microsoft/go-winio/internal/socket
 github.com/Microsoft/go-winio/internal/stringbuffer
 github.com/Microsoft/go-winio/pkg/guid
-# github.com/clbanning/mxj/v2 v2.7.0
-## explicit; go 1.15
-github.com/clbanning/mxj/v2
 # github.com/coreos/go-systemd/v22 v22.7.0
 ## explicit; go 1.23
 github.com/coreos/go-systemd/v22/activation
@@ -18,9 +15,6 @@ github.com/dustin/go-humanize
 ## explicit; go 1.23
 github.com/fsnotify/fsnotify
 github.com/fsnotify/fsnotify/internal
-# github.com/ghodss/yaml v1.0.0
-## explicit
-github.com/ghodss/yaml
 # github.com/go-chi/chi/v5 v5.5.0
 ## explicit; go 1.24
 github.com/go-chi/chi/v5
@@ -28,19 +22,15 @@ github.com/go-chi/chi/v5/middleware
 # github.com/gofrs/uuid/v5 v5.5.1
 ## explicit; go 1.25
 github.com/gofrs/uuid/v5
-# github.com/google/go-cmp v0.6.0
-## explicit; go 1.13
-# github.com/gorilla/mux v1.8.1
-## explicit; go 1.20
-github.com/gorilla/mux
-# github.com/kr/pretty v0.1.0
-## explicit
+# go.yaml.in/yaml/v2 v2.4.2 => ./third_party/go-yaml
+## explicit; go 1.21
+go.yaml.in/yaml/v2
 # golang.org/x/sys v0.50.0
 ## explicit; go 1.26.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
-## explicit
-# gopkg.in/yaml.v2 v2.4.0
-## explicit; go 1.15
-gopkg.in/yaml.v2
+# sigs.k8s.io/yaml v1.6.0 => ./third_party/sigs-yaml
+## explicit; go 1.22
+sigs.k8s.io/yaml
+# go.yaml.in/yaml/v2 => ./third_party/go-yaml
+# sigs.k8s.io/yaml => ./third_party/sigs-yaml
