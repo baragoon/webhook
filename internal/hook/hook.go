@@ -26,7 +26,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/ghodss/yaml"
+	"sigs.k8s.io/yaml"
 )
 
 // Constants used to specify the parameter source
@@ -745,6 +745,9 @@ type Hooks []Hook
 // can be either JSON or YAML.  The asTemplate parameter causes the file
 // contents to be parsed as a Go text/template prior to unmarshalling.
 func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
+	if h == nil {
+		return fmt.Errorf("cannot load hooks into a nil receiver")
+	}
 	if path == "" {
 		return nil
 	}
@@ -778,7 +781,15 @@ func (h *Hooks) LoadFromFile(path string, asTemplate bool) error {
 		file = buf.Bytes()
 	}
 
-	return yaml.Unmarshal(file, h)
+	// Decode independently so failed loads leave existing hooks unchanged.
+	var loaded Hooks
+	// Retain the pointer indirection for null handling in older YAML versions.
+	target := &loaded
+	if err := yaml.Unmarshal(file, &target); err != nil {
+		return err
+	}
+	*h = loaded
+	return nil
 }
 
 // Append appends hooks unless the new hooks contain a hook with an ID that already exists

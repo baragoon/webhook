@@ -2,9 +2,9 @@
 
 The local forks are based on `go.yaml.in/yaml/v2` v2.4.2 and
 `sigs.k8s.io/yaml` v1.6.0. They contain compatibility fixes not yet available
-in those upstream releases. The root module does not yet use these forks;
-the YAML dependency migration will add `replace` directives for them. Once
-adopted, edit the forks rather than `vendor` and regenerate with `go mod vendor`.
+in those upstream releases. The root module uses both forks via `replace`
+directives; edit the forks rather than `vendor` and regenerate with
+`go mod vendor`.
 
 The go-yaml fork requires Go 1.21 or newer.
 Its strict decoder checks overridden merge defaults for duplicate keys and
