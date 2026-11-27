@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,7 +22,6 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/gorilla/mux"
 )
 
 var (
@@ -256,33 +256,23 @@ func main() {
 		go watchForFileChange()
 	}
 
-	r := mux.NewRouter()
-
-	r.Use(middleware.RequestID(
-		middleware.UseXRequestIDHeaderOption(*useXRequestID),
-		middleware.XRequestIDLimitOption(*xRequestIDLimit),
-	))
-	r.Use(middleware.NewLogger())
-	r.Use(chimiddleware.Recoverer)
+	requestMiddlewares := []func(http.Handler) http.Handler{
+		middleware.RequestID(
+			middleware.UseXRequestIDHeaderOption(*useXRequestID),
+			middleware.XRequestIDLimitOption(*xRequestIDLimit),
+		),
+		middleware.NewLogger(),
+		chimiddleware.Recoverer,
+	}
 
 	if *debug {
-		r.Use(middleware.Dumper(log.Writer()))
+		requestMiddlewares = append(requestMiddlewares, middleware.Dumper(log.Writer()))
 	}
 
 	// Clean up input
 	*httpMethods = strings.ToUpper(strings.ReplaceAll(*httpMethods, " ", ""))
 
-	hooksURL := makeRoutePattern(hooksURLPrefix)
-
-	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		for _, responseHeader := range responseHeaders {
-			w.Header().Set(responseHeader.Name, responseHeader.Value)
-		}
-
-		fmt.Fprint(w, "OK")
-	})
-
-	r.HandleFunc(hooksURL, hookHandler)
+	r := newRouter(hooksURLPrefix, hookHandler, requestMiddlewares...)
 
 	// Create common HTTP server settings
 	svr := &http.Server{
@@ -310,6 +300,27 @@ func main() {
 	log.Print(svr.ServeTLS(ln, *cert, *key))
 }
 
+func newRouter(prefix *string, handler http.HandlerFunc, middlewares ...func(http.Handler) http.Handler) *http.ServeMux {
+	r := http.NewServeMux()
+
+	r.Handle("/{$}", withMiddleware(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		for _, responseHeader := range responseHeaders {
+			w.Header().Set(responseHeader.Name, responseHeader.Value)
+		}
+
+		fmt.Fprint(w, "OK")
+	}), middlewares...))
+
+	r.Handle(makeRoutePattern(prefix), withMiddleware(handler, middlewares...))
+
+	if base := makeRouteBaseURL(prefix); base != "" {
+		// Avoid ServeMux redirecting the bare prefix to the hook subtree.
+		r.HandleFunc(base, http.NotFound)
+	}
+
+	return r
+}
+
 func hookHandler(w http.ResponseWriter, r *http.Request) {
 	req := &hook.Request{
 		ID:         middleware.GetReqID(r.Context()),
@@ -319,7 +330,7 @@ func hookHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[%s] incoming HTTP %s request from %s\n", req.ID, r.Method, r.RemoteAddr)
 
 	// TODO: rename this to avoid confusion with Request.ID
-	id := mux.Vars(r)["id"]
+	id := r.PathValue("id")
 
 	matchedHook := matchLoadedHook(id)
 	if matchedHook == nil {
@@ -766,9 +777,20 @@ func watchForFileChange() {
 	}
 }
 
-// makeRoutePattern builds a pattern matching URL for the mux.
+// makeRoutePattern builds a pattern matching hook URLs for ServeMux.
 func makeRoutePattern(prefix *string) string {
-	return makeBaseURL(prefix) + "/{id:.*}"
+	return makeRouteBaseURL(prefix) + "/{id...}"
+}
+
+func makeRouteBaseURL(prefix *string) string {
+	if prefix == nil || *prefix == "" {
+		return ""
+	}
+	segments := strings.Split(*prefix, "/")
+	for i, segment := range segments {
+		segments[i] = url.PathEscape(segment)
+	}
+	return "/" + strings.Join(segments, "/")
 }
 
 // makeHumanPattern builds a human-friendly URL for display.
@@ -783,4 +805,12 @@ func makeBaseURL(prefix *string) string {
 	}
 
 	return "/" + *prefix
+}
+
+func withMiddleware(handler http.Handler, middlewares ...func(http.Handler) http.Handler) http.Handler {
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		handler = middlewares[i](handler)
+	}
+
+	return handler
 }
