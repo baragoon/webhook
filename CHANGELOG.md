@@ -2,6 +2,16 @@
 
 <!-- markdownlint-disable MD013 -->
 
+## [1.1.2](https://github.com/baragoon/webhook/compare/v1.1.1...v1.1.2) (2026-11-28)
+
+
+### Bug Fixes
+
+* **deps:** remove remaining unused mxj vendor files ([#32](https://github.com/baragoon/webhook/issues/32)) ([51d1ed0](https://github.com/baragoon/webhook/commit/51d1ed02554f33cb58dbab23760609204cca0512))
+* **deps:** replace gorilla/mux with ServeMux ([#33](https://github.com/baragoon/webhook/issues/33)) ([ce23bee](https://github.com/baragoon/webhook/commit/ce23bee222306407d3f8e9df025817f530107859))
+* **deps:** stage YAML fork emitter and parser ([#36](https://github.com/baragoon/webhook/issues/36)) ([454dc66](https://github.com/baragoon/webhook/commit/454dc663119de9dfa2755533c70d8af64bc8c04d))
+* **deps:** switch XML parsing from mxj to encoding/xml ([#40](https://github.com/baragoon/webhook/issues/40)) ([2210573](https://github.com/baragoon/webhook/commit/221057346d09ce46085bc275d1e412a92ea6652a))
+
 ## [1.1.1](https://github.com/baragoon/webhook/compare/v1.1.0...v1.1.1) (2026-11-26)
 
 
