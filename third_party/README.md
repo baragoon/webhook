@@ -14,6 +14,8 @@ Its JSON conversion fork retains original timestamp key spellings through
 the go-yaml fork's string-timestamp-key decoding mode. During unmarshalling,
 it also uses merge priority to select explicit values over defaults that
 match the same JSON struct field, without collapsing keys in map destinations.
+Numeric scalars decoded into strings use the previous ghodss/yaml float
+formatting to preserve existing hook values.
 
 Known limitations of the JSON conversion fork:
 

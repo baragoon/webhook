@@ -461,7 +461,8 @@ func convertToJSONableObject(yamlObj interface{}, jsonTarget *reflect.Value, str
 			case int64:
 				s = strconv.FormatInt(typedVal, 10)
 			case float64:
-				s = strconv.FormatFloat(typedVal, 'g', -1, 64)
+				// Preserve ghodss/yaml's string conversion for hook configurations.
+				s = strconv.FormatFloat(typedVal, 'g', -1, 32)
 			case uint64:
 				s = strconv.FormatUint(typedVal, 10)
 			case bool:

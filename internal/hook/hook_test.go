@@ -473,6 +473,29 @@ func TestHooksLoadRejectsInvalidEncodingAfterDocument(t *testing.T) {
 	}
 }
 
+func TestHooksLoadErrorPreservesExistingHooks(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "hooks.yaml")
+	data := "- id: replacement\n  pass-arguments-to-command:\n    - source: string\n      name: changed\n- id: later\n  success-http-response-code: invalid\n"
+	if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	backing := Hooks{
+		{ID: "existing", PassArgumentsToCommand: []Argument{{Source: SourceString, Name: "original"}}},
+		{ID: "other"},
+	}
+	hooks := backing[:1]
+	want := Hooks{
+		{ID: "existing", PassArgumentsToCommand: []Argument{{Source: SourceString, Name: "original"}}},
+		{ID: "other"},
+	}
+	if err := hooks.LoadFromFile(path, false); err == nil {
+		t.Fatal("expected a decoding error")
+	}
+	if len(hooks) != 1 || !reflect.DeepEqual(backing, want) {
+		t.Fatalf("hooks changed after failed load: hooks=%#v backing=%#v", hooks, backing)
+	}
+}
+
 func TestHooksLoadNullClearsExistingHooks(t *testing.T) {
 	var hooks Hooks
 	if err := hooks.LoadFromFile("../../hooks.yaml.example", false); err != nil {
@@ -529,6 +552,36 @@ func TestHooksLoadYAMLLegacyNumericID(t *testing.T) {
 	var hooks Hooks
 	if err := hooks.LoadFromFile(path, false); err != nil || len(hooks) != 1 || hooks[0].ID != "9e+06" || hooks.Match("9e+06") == nil {
 		t.Fatalf("hooks = %#v, %v", hooks, err)
+	}
+}
+
+func TestHooksLoadYAMLLegacyNumericStrings(t *testing.T) {
+	for _, tt := range []struct {
+		scalar string
+		want   string
+	}{
+		{"1.23456789012345", "1.2345679"},
+		{"18446744073709551616", "1.8446744e+19"},
+		{"-1.23456789012345e+20", "-1.2345679e+20"},
+		{"18446744073709551615", "18446744073709551615"},
+		{"'1.23456789012345'", "1.23456789012345"},
+	} {
+		t.Run(tt.scalar, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "hooks.yaml")
+			doc := "- id: " + tt.scalar + "\n  response-message: " + tt.scalar +
+				"\n  pass-arguments-to-command:\n    - source: string\n      name: " + tt.scalar + "\n"
+			if err := os.WriteFile(path, []byte(doc), 0600); err != nil {
+				t.Fatal(err)
+			}
+			var hooks Hooks
+			if err := hooks.LoadFromFile(path, false); err != nil {
+				t.Fatal(err)
+			}
+			if len(hooks) != 1 || hooks.Match(tt.want) == nil || hooks[0].ResponseMessage != tt.want ||
+				len(hooks[0].PassArgumentsToCommand) != 1 || hooks[0].PassArgumentsToCommand[0].Name != tt.want {
+				t.Fatalf("hooks = %#v, want string values %q", hooks, tt.want)
+			}
+		})
 	}
 }
 
