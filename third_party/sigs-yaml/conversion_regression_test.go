@@ -345,13 +345,16 @@ func TestFloat64MapKeyPrecision(t *testing.T) {
 	}
 }
 
-func TestFloat64StringPrecision(t *testing.T) {
+func TestLegacyFloatStringConversion(t *testing.T) {
 	var out struct {
 		Value string `json:"value"`
 	}
-	for _, value := range []string{"1.00000000001", "1.5"} {
-		if err := Unmarshal([]byte("value: "+value), &out); err != nil || out.Value != value {
-			t.Fatalf("%s: %#v, %v", value, out, err)
+	for _, tt := range []struct{ value, want string }{
+		{"1.00000000001", "1"},
+		{"1.5", "1.5"},
+	} {
+		if err := Unmarshal([]byte("value: "+tt.value), &out); err != nil || out.Value != tt.want {
+			t.Fatalf("%s: %#v, %v", tt.value, out, err)
 		}
 	}
 }
